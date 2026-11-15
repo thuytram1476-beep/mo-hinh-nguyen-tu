@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Xây dựng nguyên tử 3D – Mô hình Rutherford – Bohr (KHTN 7, Bài 2)</title>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--ink:#1c2333;--mute:#5b6580;--line:#d8deec;--acc:#2b6fe0;--accbg:#e6efff;--p:#e5484d;--n:#7d8996;--e:#2b8cff;--ok:#1f8a4c;--bad:#c0501a;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1320;--card:#181e30;--ink:#e8ecf7;--mute:#a3adc7;--line:#2f3857;--acc:#6ea2ff;--accbg:#1f2c4d;--n:#aab5c2;--ok:#5fd08d;--bad:#f0a36c}}
+:root[data-theme="dark"]{--bg:#0f1320;--card:#181e30;--ink:#e8ecf7;--mute:#a3adc7;--line:#2f3857;--acc:#6ea2ff;--accbg:#1f2c4d;--n:#aab5c2;--ok:#5fd08d;--bad:#f0a36c}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+main{max-width:900px;margin:0 auto;padding:12px}
+h1{font-size:1.3rem;margin:2px 0}
+.sub{color:var(--mute);margin:0 0 8px;font-size:.9rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0}
+canvas{display:block;width:100%;border-radius:12px;touch-action:none;cursor:grab;background:#050814}
+.leg{display:flex;gap:14px;flex-wrap:wrap;font-size:.88rem;margin-top:8px;color:var(--mute)}
+.leg i{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:-1px;margin-right:4px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0}
+button,select,input[type=text]{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:7px 12px;min-height:40px;cursor:pointer}
+button.pm{width:42px;padding:0;font-size:1.2rem;font-weight:700}
+button.on{background:var(--accbg);border-color:var(--acc);font-weight:600}
+button.go{background:var(--acc);color:#fff;border-color:var(--acc);font-weight:600}
+:root:not([data-theme="light"]) button.go{color:#0b1226}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px}
+.ctl div{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:6px 8px}
+.ctl b{flex:1}.ctl output{min-width:28px;text-align:center;font-weight:700;font-size:1.1rem}
+.info{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:6px 14px}
+.info p{margin:0;font-size:.95rem}.info span{color:var(--mute)}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{border:1px solid var(--line);padding:5px 7px;text-align:center}th{background:var(--accbg)}
+.wrap{overflow-x:auto}.note{color:var(--mute);font-size:.88rem}
+.ok{color:var(--ok);font-weight:600}.bad{color:var(--bad);font-weight:600}
+[hidden]{display:none!important}summary{cursor:pointer;color:var(--mute)}
+</style>
+</head>
+<body>
+<main>
+<h1>⚛️ Xây dựng nguyên tử 3D</h1>
+<p class="sub">Mô hình Rutherford – Bohr · KHTN 7 · Bài 2 · Kéo chuột/ngón tay để xoay, cuộn chuột để phóng to</p>
+<div class="card" style="padding:8px">
+<canvas id="cv" aria-label="Mô hình nguyên tử 3D"></canvas>
+<div class="leg"><span><i style="background:#e5484d"></i>Proton (+)</span><span><i style="background:#9aa6b2"></i>Nơ-tron (0)</span><span><i style="background:#4aa8ff"></i>Electron (−)</span></div>
+<div class="row"><button id="bAuto" class="on">Tự xoay</button><button id="bFlat">Mô hình phẳng (như SGK)</button><button id="bReset">Đặt lại góc nhìn</button><button id="zi" class="pm">+</button><button id="zo" class="pm">−</button></div>
+</div>
+
+<div class="card">
+<div class="ctl">
+<div><b style="color:var(--p)">Proton</b><button class="pm" data-f="p" data-d="-1">−</button><output id="vP"></output><button class="pm" data-f="p" data-d="1">+</button></div>
+<div><b style="color:var(--n)">Nơ-tron</b><button class="pm" data-f="n" data-d="-1">−</button><output id="vN"></output><button class="pm" data-f="n" data-d="1">+</button></div>
+<div><b style="color:var(--e)">Electron</b><button class="pm" data-f="e" data-d="-1">−</button><output id="vE"></output><button class="pm" data-f="e" data-d="1">+</button></div>
+</div>
+<div class="row"><label>Lắp nhanh: <select id="qp"></select></label><button id="bAdd" class="go">Ghi vào bảng</button><button id="bRev" hidden>Hiện kết quả</button></div>
+<div class="info">
+<p><span>Nguyên tố:</span> <b id="iEl"></b></p><p><span>Số khối (p + n):</span> <b id="iA"></b></p>
+<p><span>Điện tích:</span> <b id="iQ"></b></p><p><span>Electron mỗi lớp:</span> <b id="iS"></b></p>
+<p><span>Electron lớp ngoài cùng:</span> <b id="iO"></b></p>
+</div>
+</div>
+
+<div class="card">
+<b>Thử thách</b>
+<div class="row"><button id="c1">Làm nguyên tử trung hòa về điện</button><button id="c2">Nguyên tử này là nguyên tố nào?</button><span class="note" id="sc"></span></div>
+<p id="chTx" class="note"></p>
+<div class="row" id="chRow" hidden><select id="chSel"></select><button id="chOk" class="go">Kiểm tra</button></div>
+<p id="chMsg"></p>
+</div>
+
+<div class="card">
+<div class="row"><b>Bảng ghi số liệu</b><button id="cp">Sao chép bảng</button><button id="clr">Xóa</button></div>
+<div class="wrap"><table id="tb"><thead><tr><th>Lần</th><th>Proton</th><th>Nơ-tron</th><th>Electron</th><th>Nguyên tố</th><th>Điện tích</th><th>Electron mỗi lớp</th></tr></thead><tbody></tbody></table></div>
+<p class="note" id="cpMsg"></p>
+</div>
+
+<details class="card"><summary>Cấu hình của giáo viên</summary>
+<div class="row"><label><input type="checkbox" id="hide"> Chế độ dự đoán: ẩn tên nguyên tố và cách sắp xếp electron</label></div>
+<p class="note">Khi bật, HS ghi dự đoán vào phiếu trước, rồi bấm “Hiện kết quả” để kiểm chứng. Giới hạn: proton, electron tối đa 20 (20 nguyên tố đầu); nơ-tron tối đa 24; lớp 1 tối đa 2 electron, các lớp sau tối đa 8.</p>
+</details>
+</main>
+<script>
+(function(){
+var $=function(s){return document.querySelector(s)};
+var EL=[['H','Hydrogen',0],['He','Helium',2],['Li','Lithium',4],['Be','Beryllium',5],['B','Boron',6],['C','Carbon',6],['N','Nitrogen',7],['O','Oxygen',8],['F','Fluorine',10],['Ne','Neon',10],['Na','Sodium',12],['Mg','Magnesium',12],['Al','Aluminium',14],['Si','Silicon',14],['P','Phosphorus',16],['S','Sulfur',16],['Cl','Chlorine',18],['Ar','Argon',22],['K','Potassium',20],['Ca','Calcium',20]];
+var S={p:1,n:0,e:1,hide:false,rev:false,flat:false,auto:true,rx:.45,ry:.6,zoom:1,t:0,sh:[]};
+var hist=[],ch=null,score=[0,0],nuc=[],els=[],drag=null,W=600,H=420,last=performance.now();
+var cv=$('#cv'),ctx=cv.getContext('2d');
+var T=[[.9,.2],[-.5,.9],[.3,-.8],[-.9,-.4]],RAD=[2.3,3.5,4.7,5.9];
+var stars=[];for(var i=0;i<90;i++)stars.push([Math.random(),Math.random(),Math.random()*1.4+.3,Math.random()*6]);
+var COL={p:['#ffc2c2','#e5484d','#7a1017'],n:['#f2f5f8','#9aa6b2','#46515c'],e:['#dff3ff','#4aa8ff','#0b4f9c']};
+function shells(e){var cap=[2,8,8,8],r=[],k=0,c;while(e>0&&k<4){c=Math.min(cap[k],e);r.push(c);e-=c;k++}return r}
+function build(){
+ var N=S.p+S.n,ty=[],i,j,t;nuc=[];
+ for(i=0;i<S.p;i++)ty.push(1);for(i=0;i<S.n;i++)ty.push(0);
+ for(i=N-1;i>0;i--){j=Math.floor(Math.random()*(i+1));t=ty[i];ty[i]=ty[j];ty[j]=t}
+ var Rn=N<2?0:.42*Math.cbrt(N);
+ for(i=0;i<N;i++){var y=1-2*(i+.5)/N,r=Math.sqrt(1-y*y),ph=i*2.39996,f=N<2?0:Rn*Math.cbrt((i+.5)/N);nuc.push({x:Math.cos(ph)*r*f,y:y*f,z:Math.sin(ph)*r*f,p:ty[i]})}
+ els=[];S.sh=shells(S.e);
+ S.sh.forEach(function(c,k){for(var m=0;m<c;m++)els.push({k:k,ph:6.2832*m/c+k,sp:1.6/Math.pow(k+1,.85)})});
+}
+function rot(x,y,z){var cy=Math.cos(S.ry),sy=Math.sin(S.ry),cx=Math.cos(S.rx),sx=Math.sin(S.rx),x1=x*cy+z*sy,z1=-x*sy+z*cy;return[x1,y*cx-z1*sx,y*sx+z1*cx]}
+function tilt(k,x,y){var a=S.flat?0:T[k][0],b=S.flat?0:T[k][1],y1=y*Math.cos(a),z1=y*Math.sin(a);return[x*Math.cos(b)+z1*Math.sin(b),y1,-x*Math.sin(b)+z1*Math.cos(b)]}
+function pr(v){var s=18/(18-v[2]),u=Math.min(W,H)/12.4*S.zoom;return[W/2+v[0]*u*s,H/2+v[1]*u*s,s*u]}
+function ball(x,y,r,c){var g=ctx.createRadialGradient(x-r*.35,y-r*.35,r*.1,x,y,r);g.addColorStop(0,c[0]);g.addColorStop(.6,c[1]);g.addColorStop(1,c[2]);ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,Math.max(r,1),0,6.2832);ctx.fill()}
+function draw(){
+ ctx.clearRect(0,0,W,H);
+ var g=ctx.createRadialGradient(W/2,H/2,10,W/2,H/2,Math.max(W,H)*.7);g.addColorStop(0,'#16224a');g.addColorStop(1,'#050814');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+ stars.forEach(function(s){ctx.fillStyle='rgba(255,255,255,'+(.3+.35*Math.sin(S.t*1.5+s[3]))+')';ctx.fillRect(s[0]*W,s[1]*H,s[2],s[2])});
+ var rings=S.sh.map(function(c,k){var pts=[];for(var i=0;i<=72;i++){var a=i/72*6.2832,v=rot.apply(null,tilt(k,RAD[k]*Math.cos(a),RAD[k]*Math.sin(a))),q=pr(v);pts.push([q[0],q[1],v[2]])}return pts});
+ function pass(near){ctx.lineWidth=near?1.6:1;ctx.strokeStyle=near?'rgba(140,185,255,.55)':'rgba(140,185,255,.2)';rings.forEach(function(pts){ctx.beginPath();for(var i=1;i<pts.length;i++){if(((pts[i][2]+pts[i-1][2])/2>=0)===near){ctx.moveTo(pts[i-1][0],pts[i-1][1]);ctx.lineTo(pts[i][0],pts[i][1])}}ctx.stroke()})}
+ pass(false);
+ var it=[];
+ nuc.forEach(function(n){var v=rot(n.x,n.y,n.z),q=pr(v);it.push({z:v[2],x:q[0],y:q[1],r:.36*q[2],t:n.p?'p':'n'})});
+ els.forEach(function(el){var th=el.ph+S.t*el.sp,R=RAD[el.k],v=rot.apply(null,tilt(el.k,R*Math.cos(th),R*Math.sin(th))),q=pr(v);it.push({z:v[2],x:q[0],y:q[1],r:.17*q[2],t:'e'})});
+ it.sort(function(a,b){return a.z-b.z});
+ it.forEach(function(o){
+  if(o.t==='e'){ctx.globalCompositeOperation='lighter';var g2=ctx.createRadialGradient(o.x,o.y,0,o.x,o.y,o.r*3.2);g2.addColorStop(0,'rgba(74,168,255,.5)');g2.addColorStop(1,'rgba(74,168,255,0)');ctx.fillStyle=g2;ctx.beginPath();ctx.arc(o.x,o.y,o.r*3.2,0,6.2832);ctx.fill();ctx.globalCompositeOperation='source-over'}
+  ball(o.x,o.y,o.r,COL[o.t])});
+ pass(true);
+ ctx.font='12px system-ui,sans-serif';ctx.fillStyle='rgba(205,222,255,.92)';
+ S.sh.forEach(function(c,k){var v=rot.apply(null,tilt(k,RAD[k]*Math.cos(-.9),RAD[k]*Math.sin(-.9))),q=pr(v);ctx.fillText('Lớp '+(k+1)+': '+c+' e',q[0]+6,q[1]-4)});
+}
+function frame(now){var dt=Math.min(.05,(now-last)/1000);last=now;S.t+=dt;if(S.auto&&!drag&&!S.flat)S.ry+=dt*.3;draw();requestAnimationFrame(frame)}
+function size(){var w=cv.parentNode.clientWidth-16,h=Math.round(Math.min(w*.8,window.innerHeight*.62)),d=window.devicePixelRatio||1;W=w;H=h;cv.style.height=h+'px';cv.width=w*d;cv.height=h*d;ctx.setTransform(d,0,0,d,0,0)}
+cv.addEventListener('pointerdown',function(e){drag={x:e.clientX,y:e.clientY};cv.setPointerCapture(e.pointerId)});
+cv.addEventListener('pointermove',function(e){if(!drag)return;S.ry+=(e.clientX-drag.x)*.01;S.rx=Math.max(-1.4,Math.min(1.4,S.rx+(e.clientY-drag.y)*.01));drag={x:e.clientX,y:e.clientY}});
+['pointerup','pointercancel'].forEach(function(ev){cv.addEventListener(ev,function(){drag=null})});
+cv.addEventListener('wheel',function(e){e.preventDefault();zoom(e.deltaY<0?1.08:.93)},{passive:false});
+function zoom(f){S.zoom=Math.max(.6,Math.min(2,S.zoom*f))}
+window.addEventListener('resize',size);
+
+function charge(){var q=S.p-S.e;return q===0?(S.p===0?'—':'0 (trung hòa – nguyên tử)'):q>0?'+'+q+' (ion dương)':'−'+(-q)+' (ion âm)'}
+function upd(rebuild){
+ var idx=S.p>=1&&S.p<=20?S.p-1:-1,hid=(S.hide&&!S.rev)||(ch&&ch.t==='id');
+ $('#vP').textContent=S.p;$('#vN').textContent=S.n;$('#vE').textContent=S.e;
+ $('#iEl').textContent=hid?'?':(idx>=0?EL[idx][1]+' ('+EL[idx][0]+')':'—');
+ $('#iA').textContent=S.p+S.n;$('#iQ').textContent=charge();
+ var sh=shells(S.e);
+ $('#iS').textContent=(S.hide&&!S.rev)?'?':(sh.join(', ')||'—');
+ $('#iO').textContent=(S.hide&&!S.rev)?'?':(sh.length?sh[sh.length-1]:'—');
+ $('#bRev').hidden=!(S.hide&&!S.rev&&!ch);
+ $('#sc').textContent=score[1]?'Đúng '+score[0]+' / '+score[1]+' lần kiểm tra':'';
+ if(rebuild!==false)build();
+}
+function change(k,d){S[k]=Math.max(0,Math.min(k==='n'?24:20,S[k]+d));S.rev=false;upd()}
+function setEl(i){S.p=i+1;S.n=EL[i][2];S.e=i+1;S.rev=false}
+document.querySelectorAll('.pm[data-f]').forEach(function(b){b.onclick=function(){change(b.dataset.f,+b.dataset.d)}});
+var qp=$('#qp'),cs=$('#chSel');qp.innerHTML='<option value="">— chọn —</option>';
+EL.forEach(function(e,i){qp.innerHTML+='<option value="'+i+'">'+(i+1)+'. '+e[1]+' ('+e[0]+')</option>';cs.innerHTML+='<option value="'+e[0]+'">'+e[1]+' ('+e[0]+')</option>'});
+qp.onchange=function(){if(qp.value!==''){setEl(+qp.value);upd();qp.value=''}};
+$('#bAuto').onclick=function(){S.auto=!S.auto;this.classList.toggle('on',S.auto)};
+$('#bFlat').onclick=function(){S.flat=!S.flat;this.classList.toggle('on',S.flat);S.rx=S.flat?0:.45;S.ry=S.flat?0:.6};
+$('#bReset').onclick=function(){S.rx=S.flat?0:.45;S.ry=S.flat?0:.6;S.zoom=1};
+$('#zi').onclick=function(){zoom(1.15)};$('#zo').onclick=function(){zoom(.87)};
+$('#hide').onchange=function(){S.hide=this.checked;S.rev=false;upd(false)};
+$('#bRev').onclick=function(){S.rev=true;upd(false)};
+function tab(){var h='';hist.forEach(function(r,i){h+='<tr><td>'+(i+1)+'</td><td>'+r.join('</td><td>')+'</td></tr>'});$('#tb tbody').innerHTML=h||'<tr><td colspan="7" class="note">Chưa có số liệu.</td></tr>'}
+$('#bAdd').onclick=function(){var idx=S.p>=1&&S.p<=20?S.p-1:-1,hid=(S.hide&&!S.rev)||(ch&&ch.t==='id');hist.push([S.p,S.n,S.e,hid?'?':(idx>=0?EL[idx][0]:'—'),charge().split(' ')[0],(S.hide&&!S.rev)?'?':(shells(S.e).join(', ')||'—')]);tab()};
+$('#clr').onclick=function(){hist=[];tab()};
+$('#cp').onclick=function(){var t='Lần\tProton\tNơ-tron\tElectron\tNguyên tố\tĐiện tích\tElectron mỗi lớp\n';hist.forEach(function(r,i){t+=(i+1)+'\t'+r.join('\t')+'\n'});var m=function(s){$('#cpMsg').textContent=s};try{navigator.clipboard.writeText(t).then(function(){m('Đã sao chép bảng.')},function(){m('Không sao chép được – hãy chụp màn hình bảng.')})}catch(e){m('Không sao chép được – hãy chụp màn hình bảng.')}};
+function rnd(a,b){return a+Math.floor(Math.random()*(b-a+1))}
+function start(t){
+ $('#chMsg').textContent='';$('#chMsg').className='';
+ if(t==='neu'){var p=rnd(3,18),d=rnd(1,3)*(Math.random()<.5?-1:1);S.p=p;S.n=EL[p-1][2];S.e=Math.max(0,Math.min(20,p+d));ch={t:'neu',p:p};$('#chTx').textContent='Giữ nguyên số proton, chỉnh số electron để nguyên tử trung hòa về điện rồi bấm “Kiểm tra”.';$('#chRow').hidden=false;cs.hidden=true}
+ else{var i=rnd(0,19);setEl(i);ch={t:'id',i:i};$('#chTx').textContent='Đếm số hạt, đối chiếu bảng tuần hoàn trong SGK, chọn nguyên tố rồi bấm “Kiểm tra”.';$('#chRow').hidden=false;cs.hidden=false}
+ S.rev=false;upd();
+}
+$('#c1').onclick=function(){start('neu')};$('#c2').onclick=function(){start('id')};
+$('#chOk').onclick=function(){
+ if(!ch)return;var m=$('#chMsg'),ok=false;score[1]++;
+ if(ch.t==='neu'){if(S.p!==ch.p){m.textContent='Số proton đã bị đổi. Hãy giữ nguyên proton và chỉnh electron.';m.className='bad'}else if(S.e===S.p){ok=true}else{m.textContent='Chưa trung hòa: điện tích hiện tại là '+charge()+'.';m.className='bad'}}
+ else{if(cs.value===EL[ch.i][0]){ok=true}else{m.textContent='Chưa đúng. Hãy đếm lại số proton (số hiệu nguyên tử) rồi tra bảng.';m.className='bad'}}
+ if(ok){score[0]++;m.textContent='Chính xác!';m.className='ok';ch=null;$('#chRow').hidden=true;$('#chTx').textContent=''}
+ upd(false);
+};
+size();build();upd(false);tab();requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
